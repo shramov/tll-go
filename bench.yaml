@@ -1,0 +1,7 @@
+module:
+  - module: ./echo
+channel:
+  - null://
+  - echo://
+  - go-null://
+  - go-echo://
