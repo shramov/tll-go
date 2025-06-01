@@ -8,6 +8,6 @@ func tll_channel_module() uintptr {
 	return module.Ptr()
 }
 
-var module = tll.NewModule(tll.CreateImpl[*Null](), tll.CreateImpl[*Echo]())
+var module = tll.NewModule(tll.CreateImpl[*Null](), tll.CreateImpl[*Echo](), tll.CreateImpl[*Prefix]())
 
 func main() {}

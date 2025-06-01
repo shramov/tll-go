@@ -18,3 +18,17 @@ func (self *Echo) Post(m *tll.Message) int {
 	self.Callback(m)
 	return 0
 }
+
+type Prefix struct {
+	tll.Prefix
+}
+
+func (self *Prefix) Protocol() string { return "go-prefix+" }
+
+func (self *Prefix) Init(url *tll.ConstConfig, ctx *tll.Context) tll.ChannelImpl {
+	r := Prefix{}
+	if r.InitPrefix(&r, url, ctx) != 0 {
+		return nil
+	}
+	return &r
+}

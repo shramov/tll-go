@@ -112,6 +112,16 @@ type Base struct {
 	pinner   runtime.Pinner
 }
 
+func (self *Base) InitInternal() {
+	if self.internal != nil {
+		return
+	}
+	self.pinner.Pin(self)
+	self.internal = new(C.tll_channel_internal_t)
+	self.pinner.Pin(self.internal)
+	C.tll_channel_internal_init(self.internal)
+}
+
 func (self *Base) State() State {
 	return State(self.internal.state)
 }
@@ -126,6 +136,14 @@ func (self *Base) Callback(m *Message) {
 
 func (self *Base) CallbackData(m *Message) {
 	C.tll_channel_callback_data(self.internal, m.ptr)
+}
+
+func (self *Base) ChildAdd(c *Channel, tag string) int {
+	return int(C.tll_channel_internal_child_add(self.internal, c.ptr, nil, 0))
+}
+
+func (self *Base) ChildDel(c *Channel, tag string) int {
+	return int(C.tll_channel_internal_child_del(self.internal, c.ptr, nil, 0))
 }
 
 func (self *Base) GetBase() *Base { return self }
@@ -159,14 +177,11 @@ func _GoInit(c *C.tll_channel_t, ccfg *C.tll_config_t, master *C.tll_channel_t, 
 	}
 
 	base := data.GetBase()
+	base.InitInternal()
 	base.impl = data
-	base.pinner.Pin(base)
-	base.internal = new(C.tll_channel_internal_t)
-	base.pinner.Pin(base.internal)
 
 	c.data = unsafe.Pointer(base)
 	c.internal = base.internal
-	C.tll_channel_internal_init(c.internal)
 	c.internal.name = C.CString("tll.go")
 	c.internal.logger = C.tll_logger_new(c.internal.name, -1)
 	c.internal.self = c
@@ -242,8 +257,6 @@ func (self *Module) Ptr() uintptr {
 func NewModule(impls ...*Impl) Module {
 	r := Module{}
 	r.ptr = new(CModule)
-	r.pinner = runtime.Pinner{}
-	r.pinner.Pin(r.ptr)
 	r.impl = impls
 	r.ptr.impl = C.alloc_impl(C.size_t(len(impls) + 1))
 	for i, impl := range r.impl {

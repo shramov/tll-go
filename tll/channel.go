@@ -6,8 +6,24 @@ package tll
 */
 import "C"
 
+type MessageType int
+
+const (
+	MessageData    int = C.TLL_MESSAGE_DATA
+	MessageState   int = C.TLL_MESSAGE_STATE
+	MessageControl int = C.TLL_MESSAGE_CONTROL
+)
+
 type Message struct {
 	ptr *C.tll_msg_t
+}
+
+func (self *Message) GetType() int {
+	return int(self.ptr._type)
+}
+
+func (self *Message) GetMsgId() int {
+	return int(self.ptr.msgid)
 }
 
 type Context struct {

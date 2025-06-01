@@ -5,3 +5,5 @@ channel:
   - echo://
   - go-null://
   - go-echo://
+  - prefix+echo://
+  - go-prefix+echo://
