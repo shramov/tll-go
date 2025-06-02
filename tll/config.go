@@ -62,6 +62,17 @@ func (self Config) SubCreate(key string) *Config {
 	return &Config{ConstConfig{ptr}}
 }
 
+func (self ConstConfig) Value() *string {
+	var size C.int
+	r := C.tll_config_get_copy(self.ptr, nil, 0, &size)
+	if r == nil {
+		return nil
+	}
+	defer C.tll_config_value_free(r)
+	s := C.GoStringN(r, size)
+	return &s
+}
+
 func (self ConstConfig) Get(key string) *string {
 	var size C.int
 	r := C.tll_config_get_copy(self.ptr, C._GoStringPtr(key), C.int(len(key)), &size)
