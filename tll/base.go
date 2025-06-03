@@ -98,28 +98,48 @@ type Impl struct {
 type ChannelImpl interface {
 	Protocol() string
 	GetBase() *Base
-	Init(cfg *ConstConfig, ctx *Context) ChannelImpl
+	Init(cfg ConstConfig, ctx Context) (ChannelImpl, error)
 	Free()
-	Open(cfg *ConstConfig) int
+	Open(cfg ConstConfig) int
 	Close(bool) int
 	Process() int
-	Post(*Message) int
+	Post(*Message) error
 }
 
 type Base struct {
 	impl     ChannelImpl
 	internal *C.tll_channel_internal_t
 	pinner   runtime.Pinner
+	name     string
+	context  Context
+	logger   Logger
 }
 
-func (self *Base) InitInternal() {
+func (self *Base) InitBase(cfg ConstConfig, ctx Context) error {
 	if self.internal != nil {
-		return
+		return nil
 	}
-	self.pinner.Pin(self)
 	self.internal = new(C.tll_channel_internal_t)
-	self.pinner.Pin(self.internal)
 	C.tll_channel_internal_init(self.internal)
+
+	if s := cfg.Get("name"); s != nil {
+		self.name = *s
+	} else {
+		self.name = "unnamed"
+	}
+	if s := cfg.Get("dump"); s != nil {
+		if v, err := parseMessageLogFormat(*s); err == nil {
+			self.internal.dump = C.tll_channel_log_msg_format_t(v)
+		} else {
+			return fmt.Errorf("Invalid dump parameter: %s", *s)
+		}
+	}
+	self.logger = *NewLogger("tll.channel." + self.name)
+
+	self.context = ctx.Ref()
+	self.pinner.Pin(self)
+	self.pinner.Pin(self.internal)
+	return nil
 }
 
 func (self *Base) State() State {
@@ -130,11 +150,14 @@ func (self *Base) SetState(s State) {
 	C.tll_channel_internal_set_state(self.internal, C.tll_state_t(s))
 }
 
-func (self *Base) Callback(m *Message) {
+func (self *Base) Context() Context { return self.context }
+func (self *Base) Logger() Logger   { return self.logger }
+
+func (self *Base) Callback(m Message) {
 	C.tll_channel_callback(self.internal, m.ptr)
 }
 
-func (self *Base) CallbackData(m *Message) {
+func (self *Base) CallbackData(m Message) {
 	C.tll_channel_callback_data(self.internal, m.ptr)
 }
 
@@ -146,10 +169,15 @@ func (self *Base) ChildDel(c *Channel, tag string) int {
 	return int(C.tll_channel_internal_child_del(self.internal, c.ptr, nil, 0))
 }
 
+func (self *Base) ChildUrlFill(cfg Config, tag string) {
+	cfg.Set("name", self.name+"/"+tag)
+	cfg.Set("tll.internal", "yes")
+}
+
 func (self *Base) GetBase() *Base { return self }
 func (*Base) Free()               {}
 
-func (self *Base) Open(*ConstConfig) int {
+func (self *Base) Open(ConstConfig) int {
 	self.SetState(StateActive)
 	return 0
 }
@@ -163,34 +191,33 @@ func (*Base) Process() int {
 	return 0
 }
 
-func (self *Base) Post(m *Message) int {
-	return 0
+func (self *Base) Post(m *Message) error {
+	return nil
 }
 
 //export _GoInit
 func _GoInit(c *C.tll_channel_t, ccfg *C.tll_config_t, master *C.tll_channel_t, context *C.tll_channel_context_t) C.int {
 	h := cgo.Handle(C._impl_handle(c.impl)).Value().(ChannelImpl)
 	cfg := ConstConfig{ccfg}
-	data := h.Init(&cfg, &Context{context})
-	if data == nil {
+	ctx := Context{context}
+	data, err := h.Init(cfg, ctx)
+	logger := NewLogger("tll.context.go")
+	if err != nil {
+		logger.Errorf("Failed to create channel: %s", err.Error())
+		return C.int(syscall.EINVAL)
+	} else if data == nil {
 		return C.int(syscall.EINVAL)
 	}
 
 	base := data.GetBase()
-	base.InitInternal()
+	base.InitBase(cfg, ctx)
 	base.impl = data
 
 	c.data = unsafe.Pointer(base)
 	c.internal = base.internal
-	c.internal.name = C.CString("tll.go")
-	c.internal.logger = C.tll_logger_new(c.internal.name, -1)
+	c.internal.name = C.CString(base.name)
+	c.internal.logger = C.tll_logger_copy(base.logger.ptr)
 	c.internal.self = c
-
-	if s := cfg.Get("dump"); s != nil {
-		if v, err := parseMessageLogFormat(*s); err == nil {
-			c.internal.dump = C.tll_channel_log_msg_format_t(v)
-		}
-	}
 	return 0
 }
 
@@ -207,7 +234,7 @@ func _GoFree(c *C.tll_channel_t) {
 func _GoOpen(c *C.tll_channel_t, cfg *C.tll_config_t) C.int {
 	data := (*Base)(unsafe.Pointer(c.data))
 	data.SetState(StateOpening)
-	return C.int(data.impl.Open(&ConstConfig{cfg}))
+	return C.int(data.impl.Open(ConstConfig{cfg}))
 }
 
 //export _GoClose
@@ -226,7 +253,11 @@ func _GoProcess(c *C.tll_channel_t, timeout C.long, flags C.int) C.int {
 //export _GoPost
 func _GoPost(c *C.tll_channel_t, m *C.tll_msg_t, flags C.int) C.int {
 	data := (*Base)(unsafe.Pointer(c.data))
-	return C.int(data.impl.Post(&Message{m}))
+	if err := data.impl.Post(&Message{m}); err != nil {
+		data.Logger().Errorf("Failed to post: %s", err.Error())
+		return C.int(syscall.EINVAL)
+	}
+	return 0
 }
 
 func CreateImpl[I ChannelImpl]() *Impl {
@@ -238,7 +269,7 @@ func CreateImpl[I ChannelImpl]() *Impl {
 	return impl
 }
 
-func (ctx *Context) register(impl *Impl) int {
+func (ctx Context) register(impl *Impl) int {
 	return int(C.tll_channel_impl_register(ctx.ptr, impl.impl, nil))
 }
 

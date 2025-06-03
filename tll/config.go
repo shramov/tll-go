@@ -5,12 +5,21 @@ package tll
 #include <tll/config.h>
 */
 import "C"
+import "errors"
 
 type ConstConfig struct{ ptr *C.tll_config_t }
 type Config struct{ ConstConfig }
 
 func NewConfig() *Config {
 	ptr := C.tll_config_new()
+	if ptr == nil {
+		return nil
+	}
+	return &Config{ConstConfig{ptr}}
+}
+
+func LoadConfig(url string) *Config {
+	ptr := C.tll_config_load(C._GoStringPtr(url), C.int(len(url)))
 	if ptr == nil {
 		return nil
 	}
@@ -82,6 +91,19 @@ func (self ConstConfig) Get(key string) *string {
 	defer C.tll_config_value_free(r)
 	s := C.GoStringN(r, size)
 	return &s
+}
+
+func (self ConstConfig) GetUrl(key string) (*Config, error) {
+	r := C.tll_config_get_url(self.ptr, C._GoStringPtr(key), C.int(len(key)))
+	if r == nil {
+		return nil, errors.New("Invalid Config pointer")
+	}
+	rc := Config{ConstConfig{r}}
+	if v := rc.Value(); v != nil {
+		rc.Unref()
+		return nil, errors.New(*v)
+	}
+	return &rc, nil
 }
 
 func (self Config) Set(key string, value string) {

@@ -1,6 +1,7 @@
 package tll
 
 import "strings"
+import "errors"
 
 type ChannelPrefixImpl interface {
 	OnState(State) int
@@ -13,30 +14,31 @@ type Prefix struct {
 	child Channel
 }
 
-func (self *Prefix) InitPrefix(impl ChannelPrefixImpl, url *ConstConfig, ctx *Context) int {
+func (self *Prefix) InitPrefix(impl ChannelPrefixImpl, url ConstConfig, ctx Context) error {
 	curl := url.Copy()
+	defer curl.Unref()
 	proto := curl.Get("tll.proto")
 	if proto == nil {
-		println("No proto in url")
-		return -1
+		return errors.New("No proto in url")
 	}
 	if idx := strings.IndexByte(*proto, '+'); idx >= 0 {
 		curl.Set("tll.proto", (*proto)[idx+1:])
 	} else {
-		println("No + separator in url")
-		return -1
+		return errors.New("No + separator in protocol")
 	}
-	curl.Set("name", "go-prefix/"+*url.Get("name"))
-	child := ctx.ChannelCfg(&curl.ConstConfig)
+	self.ChildUrlFill(*curl, "go-prefix")
+	child := ctx.ChannelCfg(curl.ConstConfig)
 	if child == nil {
-		return -1
+		return errors.New("Failed to create child channel")
 	}
 
-	self.InitInternal()
+	if err := self.InitBase(url, ctx); err != nil {
+		return err
+	}
 	self.child = *child
 	self.child.CallbackAdd(func(c *Channel, m *Message) int { return prefixCallback(impl, m) }, 0xff)
 	self.ChildAdd(child, "child")
-	return 0
+	return nil
 }
 
 func (self *Prefix) OnState(s State) int {
@@ -54,36 +56,38 @@ func (self *Prefix) OnState(s State) int {
 }
 
 func (self *Prefix) OnData(m *Message) int {
-	self.CallbackData(m)
+	self.CallbackData(*m)
 	return 0
 }
 
 func (self *Prefix) OnOther(m *Message) int {
-	self.Callback(m)
+	self.Callback(*m)
 	return 0
 }
 
 func prefixCallback(self ChannelPrefixImpl, m *Message) int {
-	switch m.GetType() {
+	switch m.Type() {
 	case MessageData:
 		return self.OnData(m)
 	case MessageState:
-		return self.OnState(State(m.GetMsgId()))
+		return self.OnState(State(m.MsgId()))
 	default:
 		return self.OnOther(m)
 	}
 	return 0
 }
 
-func (self *Prefix) Open(cfg *ConstConfig) int {
-	return self.child.OpenCfg(cfg)
+func (self *Prefix) Open(cfg ConstConfig) int {
+	return self.child.OpenCfg(&cfg)
 }
 
 func (self *Prefix) Close(force bool) int {
 	return self.child.CloseForce(force)
 }
 
-func (self *Prefix) Post(m *Message) int {
-	self.child.Post(m)
-	return 0
+func (self *Prefix) Post(m *Message) error {
+	if r := self.child.Post(m); r != 0 {
+		return errors.New("Child post failed")
+	}
+	return nil
 }

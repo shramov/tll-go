@@ -8,16 +8,16 @@ func (self *Echo) Protocol() string {
 	return "echo"
 }
 
-func (self *Echo) Init(*ConstConfig, *Context) ChannelImpl {
+func (self *Echo) Init(ConstConfig, Context) (ChannelImpl, error) {
 	println("Init")
-	return &Echo{}
+	return &Echo{}, nil
 }
 
 func (self *Echo) Free() {
 	println("Free")
 }
 
-func (self *Echo) Open(*ConstConfig) int {
+func (self *Echo) Open(ConstConfig) int {
 	println("Open")
 	return 0
 }
@@ -32,9 +32,9 @@ func (self *Echo) Process() int {
 	return 0
 }
 
-func (self *Echo) Post(m *Message) int {
+func (self *Echo) Post(m *Message) error {
 	println("Post")
-	return 0
+	return nil
 }
 
 func TestEcho(t *testing.T) {

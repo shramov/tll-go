@@ -6,26 +6,6 @@ package tll
 */
 import "C"
 
-type MessageType int
-
-const (
-	MessageData    int = C.TLL_MESSAGE_DATA
-	MessageState   int = C.TLL_MESSAGE_STATE
-	MessageControl int = C.TLL_MESSAGE_CONTROL
-)
-
-type Message struct {
-	ptr *C.tll_msg_t
-}
-
-func (self *Message) GetType() int {
-	return int(self.ptr._type)
-}
-
-func (self *Message) GetMsgId() int {
-	return int(self.ptr.msgid)
-}
-
 type Context struct {
 	ptr *C.tll_channel_context_t
 }
@@ -38,6 +18,12 @@ func NewContext() Context {
 	return Context{C.tll_channel_context_new(nil)}
 }
 
+func (ctx Context) Ref() Context { return Context{C.tll_channel_context_ref(ctx.ptr)} }
+func (ctx *Context) Free() {
+	C.tll_channel_context_free(ctx.ptr)
+	ctx.ptr = nil
+}
+
 func (ctx Context) Channel(url string) *Channel {
 	ptr := C.tll_channel_new(ctx.ptr, C._GoStringPtr(url), C.size_t(len(url)), nil, nil)
 	if ptr == nil {
@@ -46,8 +32,16 @@ func (ctx Context) Channel(url string) *Channel {
 	return &Channel{ptr}
 }
 
-func (ctx Context) ChannelCfg(cfg *ConstConfig) *Channel {
+func (ctx Context) ChannelCfg(cfg ConstConfig) *Channel {
 	ptr := C.tll_channel_new_url(ctx.ptr, cfg.ptr, nil, nil)
+	if ptr == nil {
+		return nil
+	}
+	return &Channel{ptr}
+}
+
+func (self Context) Get(name string) *Channel {
+	ptr := C.tll_channel_get(self.ptr, C._GoStringPtr(name), C.int(len(name)))
 	if ptr == nil {
 		return nil
 	}
@@ -81,6 +75,10 @@ func (self Channel) CloseForce(force bool) int {
 
 func (self Channel) Name() string {
 	return C.GoString(C.tll_channel_name(self.ptr))
+}
+
+func (self Channel) State() State {
+	return State(self.ptr.internal.state)
 }
 
 func (self Channel) Post(m *Message) int {
