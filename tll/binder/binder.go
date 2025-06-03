@@ -5,6 +5,7 @@ package binder
 #include <tll/scheme/types.h>
 */
 import "C"
+import "bytes"
 import "encoding/binary"
 import "math"
 import "unsafe"
@@ -36,6 +37,14 @@ func (self Binder) SetUint16(off uint, v uint16)   { binary.LittleEndian.PutUint
 func (self Binder) SetUint32(off uint, v uint32)   { binary.LittleEndian.PutUint32(self.data[off:], v) }
 func (self Binder) SetUint64(off uint, v uint64)   { binary.LittleEndian.PutUint64(self.data[off:], v) }
 func (self Binder) SetFloat64(off uint, v float64) { self.SetUint64(off, math.Float64bits(v)) }
+
+func (self Binder) ByteString(off uint, size uint) string {
+	slice := self.data[off:off+size]
+	if idx := bytes.IndexByte(slice, 0); idx != -1 {
+		slice = slice[:idx]
+	}
+	return string(slice)
+}
 
 func (self Binder) PointerDefault(off uint) *PointerDefault {
 	return (*PointerDefault)(unsafe.Pointer(&self.data[off]))
