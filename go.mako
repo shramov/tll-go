@@ -105,7 +105,7 @@ func (self ${m.name}_${f.name}) Get(idx uint) ${field2type(m, f.type_ptr)} {
 % endif
 </%def>\
 <%def name='field2code(msg, f)'>\
-${field2decl(msg, f)}func (self ${msg.name}) Get${f.name}() ${field2type(msg, f)} { return ${getter(msg, f)} }
+${field2decl(msg, f)}func (self ${msg.name}) Get${f.name.capitalize()}() ${field2type(msg, f)} { return ${getter(msg, f)} }
 </%def>
 % for e in scheme.enums.values():
 <%call expr='enum2code(e.name, e)'></%call>
