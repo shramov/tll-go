@@ -12,10 +12,10 @@ import "unsafe"
 //export GoCallback
 func GoCallback(c *C.tll_channel_t, m *C.tll_msg_t, data C.uintptr_t) C.int {
 	cb := cgo.Handle(data).Value().(Callback)
-	return C.int(cb(&Channel{c}, &Message{m}))
+	return C.int(cb(Channel{c}, Message{m}))
 }
 
-type Callback func(*Channel, *Message) int
+type Callback func(Channel, Message) int
 
 func (self Channel) CallbackAdd(cb Callback, mask uint32) int {
 	h := cgo.NewHandle(cb)

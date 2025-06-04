@@ -5,8 +5,8 @@ import "errors"
 
 type ChannelPrefixImpl interface {
 	OnState(State) int
-	OnData(*Message) int
-	OnOther(*Message) int
+	OnData(Message) int
+	OnOther(Message) int
 }
 
 type Prefix struct {
@@ -36,8 +36,8 @@ func (self *Prefix) InitPrefix(impl ChannelPrefixImpl, url ConstConfig, ctx Cont
 		return err
 	}
 	self.child = *child
-	self.child.CallbackAdd(func(c *Channel, m *Message) int { return prefixCallback(impl, m) }, 0xff)
-	self.ChildAdd(child, "child")
+	self.child.CallbackAdd(func(c Channel, m Message) int { return prefixCallback(impl, m) }, 0xff)
+	self.ChildAdd(self.child, "child")
 	return nil
 }
 
@@ -55,17 +55,17 @@ func (self *Prefix) OnState(s State) int {
 	return 0
 }
 
-func (self *Prefix) OnData(m *Message) int {
-	self.CallbackData(*m)
+func (self *Prefix) OnData(m Message) int {
+	self.CallbackData(m)
 	return 0
 }
 
-func (self *Prefix) OnOther(m *Message) int {
-	self.Callback(*m)
+func (self *Prefix) OnOther(m Message) int {
+	self.Callback(m)
 	return 0
 }
 
-func prefixCallback(self ChannelPrefixImpl, m *Message) int {
+func prefixCallback(self ChannelPrefixImpl, m Message) int {
 	switch m.Type() {
 	case MessageData:
 		return self.OnData(m)
@@ -85,7 +85,7 @@ func (self *Prefix) Close(force bool) int {
 	return self.child.CloseForce(force)
 }
 
-func (self *Prefix) Post(m *Message) error {
+func (self *Prefix) Post(m Message) error {
 	if r := self.child.Post(m); r != 0 {
 		return errors.New("Child post failed")
 	}

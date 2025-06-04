@@ -81,7 +81,7 @@ func (self Channel) State() State {
 	return State(self.ptr.internal.state)
 }
 
-func (self Channel) Post(m *Message) int {
+func (self Channel) Post(m Message) int {
 	return int(C.tll_channel_post(self.ptr, m.ptr, 0))
 }
 

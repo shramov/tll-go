@@ -32,7 +32,7 @@ func (self *Echo) Process() int {
 	return 0
 }
 
-func (self *Echo) Post(m *Message) error {
+func (self *Echo) Post(m Message) error {
 	println("Post")
 	return nil
 }
@@ -49,7 +49,7 @@ func TestEcho(t *testing.T) {
 		panic("Fail to init channel")
 	}
 	println(c.Name())
-	c.CallbackAdd(func(c *Channel, m *Message) int {
+	c.CallbackAdd(func(c Channel, m Message) int {
 		println("Tick")
 		return 0
 	}, 0xFFFF)

@@ -103,7 +103,7 @@ type ChannelImpl interface {
 	Open(cfg ConstConfig) int
 	Close(bool) int
 	Process() int
-	Post(*Message) error
+	Post(Message) error
 }
 
 type Base struct {
@@ -161,11 +161,11 @@ func (self *Base) CallbackData(m Message) {
 	C.tll_channel_callback_data(self.internal, m.ptr)
 }
 
-func (self *Base) ChildAdd(c *Channel, tag string) int {
+func (self *Base) ChildAdd(c Channel, tag string) int {
 	return int(C.tll_channel_internal_child_add(self.internal, c.ptr, nil, 0))
 }
 
-func (self *Base) ChildDel(c *Channel, tag string) int {
+func (self *Base) ChildDel(c Channel, tag string) int {
 	return int(C.tll_channel_internal_child_del(self.internal, c.ptr, nil, 0))
 }
 
@@ -191,7 +191,7 @@ func (*Base) Process() int {
 	return 0
 }
 
-func (self *Base) Post(m *Message) error {
+func (self *Base) Post(m Message) error {
 	return nil
 }
 
@@ -253,7 +253,7 @@ func _GoProcess(c *C.tll_channel_t, timeout C.long, flags C.int) C.int {
 //export _GoPost
 func _GoPost(c *C.tll_channel_t, m *C.tll_msg_t, flags C.int) C.int {
 	data := (*Base)(unsafe.Pointer(c.data))
-	if err := data.impl.Post(&Message{m}); err != nil {
+	if err := data.impl.Post(Message{m}); err != nil {
 		data.Logger().Errorf("Failed to post: %s", err.Error())
 		return C.int(syscall.EINVAL)
 	}

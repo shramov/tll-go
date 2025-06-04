@@ -14,8 +14,8 @@ func (self *Echo) Protocol() string { return "go-echo" }
 
 func (self *Echo) Init(tll.ConstConfig, tll.Context) (tll.ChannelImpl, error) { return &Echo{}, nil }
 
-func (self *Echo) Post(m *tll.Message) error {
-	self.Callback(*m)
+func (self *Echo) Post(m tll.Message) error {
+	self.Callback(m)
 	return nil
 }
 
