@@ -8,6 +8,7 @@ import "C"
 import "bytes"
 import "encoding/binary"
 import "math"
+import "time"
 import "unsafe"
 
 type Binder struct {
@@ -101,3 +102,12 @@ func (self PointerLegacyShort) Size() uint   { return uint(self.size) }
 func (self PointerLegacyLong) Offset() uint { return uint(self.offset) }
 func (self PointerLegacyLong) Entity() uint { return uint(self.entity) }
 func (self PointerLegacyLong) Size() uint   { return uint(self.size) }
+
+func DurationCast(v, mul, div int64) time.Duration {
+	return time.Duration(v * (mul * 1000000000 / div))
+}
+
+func TimeCast(v, mul, div int64) time.Time {
+	ns := v * (mul * 1000000000 / div)
+	return time.Unix(ns / 1000000000, ns % 1000000000).In(time.UTC)
+}

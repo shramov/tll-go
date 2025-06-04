@@ -1,6 +1,11 @@
-package scheme_test
+<%def name='setup_options(parser)'><%
+    parser.add_argument('--package', dest='package', type=str, default=None,
+                        help='Go package name for generated source')
+%></%def>\
+package ${options.package or 'scheme'}
 
 import "github.com/shramov/tll-go/tll/binder"
+import "time"
 
 const SchemeString string = "${scheme.dump('yamls+gz')}"
 
@@ -17,6 +22,8 @@ NUMERIC = {
     S.Type.Double: 'float64',
 }
 
+from tll.chrono import Resolution
+
 def numeric(t):
     return NUMERIC.get(t, None)
 
@@ -24,7 +31,12 @@ def getter(m, f, offset=None):
     offset = f.offset if offset is None else offset
     n = numeric(f.type)
     if n is not None:
-        return f'self.{n.capitalize()}({offset})'
+	r = f'self.{n.capitalize()}({offset})'
+        if f.sub_type in (f.Sub.Duration, f.Sub.TimePoint):
+	    res = f.time_resolution.value
+	    name = 'Duration' if f.sub_type == f.Sub.Duration else 'Time'
+            return f'binder.{name}Cast(int64({r}), {res[0]}, {res[1]})'
+	return r
     elif f.type == f.Type.Bytes and f.sub_type == f.Sub.ByteString:
         return f'self.ByteString({offset}, {f.size})'
     elif f.type == f.Type.Array:
@@ -44,6 +56,10 @@ def keyword(n):
 def field2type(m, f):
     t = numeric(f.type)
     if t is not None:
+        if f.sub_type == f.Sub.Duration:
+            return 'time.Duration'
+        elif f.sub_type == f.Sub.TimePoint:
+            return 'time.Time'
         return t
     elif f.type == f.Decimal128:
         return 'scheme.Decimal128'
