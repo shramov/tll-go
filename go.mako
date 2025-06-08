@@ -95,7 +95,7 @@ func (self ${m.name}_${f.name}) Get(idx uint) ${field2type(m, f.type_array)} { r
 % elif f.type == f.Pointer and f.sub_type != f.Sub.ByteString:
 ${field2decl(m, f.type_ptr)}type ${m.name}_${f.name} struct{binder.Binder}
 func (self ${m.name}_${f.name}) Size() uint { return self.PointerDefault(0).Size() }
-func (self ${m.name}_${f.name}) ElementSize() uint { return self.PointerDefault(0).Entity() }
+func (self ${m.name}_${f.name}) ElementSize() uint { return self.PointerDefault(0).Entity(${f.size}) }
 func (self ${m.name}_${f.name}) Get(idx uint) ${field2type(m, f.type_ptr)} {
         ptr := self.PointerDefault(0)
         offset := ptr.Offset()

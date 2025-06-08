@@ -84,24 +84,37 @@ type PointerLegacyLong C.tll_scheme_offset_ptr_legacy_long_t
 
 type PointerImpl interface {
 	Offset() uint
-	Entity() uint
+	Entity(size uint) uint
 	Size() uint
 }
 
-func (self PointerDefault) Offset() uint { return uint(self.offset) }
-func (self PointerDefault) Entity() uint { return uint(self.entity) }
+func (self PointerDefault) Offset() uint {
+	if self.entity != 0xff || self.offset == 0 {
+		return uint(self.offset)
+	}
+	return uint(self.offset + 4)
+}
+func (self *PointerDefault) Entity(size uint) uint {
+	if e := uint(self.entity); e != 0xff {
+		return e
+	}
+	if self.offset == 0 {
+		return size
+	}
+	return uint(*(*uint32)(unsafe.Add(unsafe.Pointer(&self.offset), self.offset)))
+}
 func (self *PointerDefault) Size() uint {
 	slice := unsafe.Slice(&self.offset, 2)
 	return uint(slice[1] & 0xffffff)
 }
 
-func (self PointerLegacyShort) Offset() uint { return uint(self.offset) }
-func (self PointerLegacyShort) Entity() uint { return 0 }
-func (self PointerLegacyShort) Size() uint   { return uint(self.size) }
+func (self PointerLegacyShort) Offset() uint          { return uint(self.offset) }
+func (self PointerLegacyShort) Entity(size uint) uint { return size }
+func (self PointerLegacyShort) Size() uint            { return uint(self.size) }
 
-func (self PointerLegacyLong) Offset() uint { return uint(self.offset) }
-func (self PointerLegacyLong) Entity() uint { return uint(self.entity) }
-func (self PointerLegacyLong) Size() uint   { return uint(self.size) }
+func (self PointerLegacyLong) Offset() uint          { return uint(self.offset) }
+func (self PointerLegacyLong) Entity(size uint) uint { return uint(self.entity) }
+func (self PointerLegacyLong) Size() uint            { return uint(self.size) }
 
 func DurationCast(v, mul, div int64) time.Duration {
 	return time.Duration(v * (mul * 1000000000 / div))
