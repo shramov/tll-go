@@ -40,7 +40,7 @@ func (self Binder) SetUint64(off uint, v uint64)   { binary.LittleEndian.PutUint
 func (self Binder) SetFloat64(off uint, v float64) { self.SetUint64(off, math.Float64bits(v)) }
 
 func (self Binder) ByteString(off uint, size uint) string {
-	slice := self.data[off:off+size]
+	slice := self.data[off : off+size]
 	if idx := bytes.IndexByte(slice, 0); idx != -1 {
 		slice = slice[:idx]
 	}
@@ -109,5 +109,5 @@ func DurationCast(v, mul, div int64) time.Duration {
 
 func TimeCast(v, mul, div int64) time.Time {
 	ns := v * (mul * 1000000000 / div)
-	return time.Unix(ns / 1000000000, ns % 1000000000).In(time.UTC)
+	return time.Unix(ns/1000000000, ns%1000000000).In(time.UTC)
 }
