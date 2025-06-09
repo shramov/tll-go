@@ -35,7 +35,7 @@ def getter(m, f, offset=None):
         if f.sub_type in (f.Sub.Duration, f.Sub.TimePoint):
 	    res = f.time_resolution.value
 	    name = 'Duration' if f.sub_type == f.Sub.Duration else 'Time'
-            return f'binder.{name}Cast(int64({r}), {res[0]}, {res[1]})'
+            return f'binder.{name}From(int64({r}), {res[0]}, {res[1]})'
 	return r
     elif f.type == f.Type.Bytes and f.sub_type == f.Sub.ByteString:
         return f'self.ByteString({offset}, {f.size})'
@@ -48,6 +48,19 @@ def getter(m, f, offset=None):
     elif f.type == f.Type.Message:
         return f'{f.type_msg.name}{{self.View({offset})}}'
     return 'nil'
+
+def setter(m, f, offset=None):
+    offset = f.offset if offset is None else offset
+    n = numeric(f.type)
+    if n is not None:
+	r = [f'self.Set{n.capitalize()}({offset}, ', 'v', f')']
+        if f.sub_type in (f.Sub.Duration, f.Sub.TimePoint):
+	    res = f.time_resolution.value
+	    name = 'Duration' if f.sub_type == f.Sub.Duration else 'Time'
+            r[1] = f'{n}(binder.{name}Into(v, {res[0]}, {res[1]}))'
+	return ''.join(r)
+    elif f.type == f.Type.Bytes and f.sub_type == f.Sub.ByteString:
+        return f'self.SetByteString(v, {offset}, {f.size})'
 
 KEYWORDS = {'type': 'type_'}
 def keyword(n):
@@ -106,6 +119,9 @@ func (self ${m.name}_${f.name}) Get(idx uint) ${field2type(m, f.type_ptr)} {
 </%def>\
 <%def name='field2code(msg, f)'>\
 ${field2decl(msg, f)}func (self ${msg.name}) Get${f.name.capitalize()}() ${field2type(msg, f)} { return ${getter(msg, f)} }
+% if s := setter(msg, f):
+func (self ${msg.name}) Set${f.name.capitalize()}(v ${field2type(msg, f)}) { ${s} }
+% endif
 </%def>
 % for e in scheme.enums.values():
 <%call expr='enum2code(e.name, e)'></%call>
@@ -113,6 +129,7 @@ ${field2decl(msg, f)}func (self ${msg.name}) Get${f.name.capitalize()}() ${field
 % for msg in scheme.messages:
 type ${msg.name} struct {binder.Binder}
 func Bind${msg.name}(ptr []byte) ${msg.name} { return ${msg.name}{binder.NewBinder(ptr)} }
+func (${msg.name}) MessageSize() int { return ${msg.size} }
 % if msg.msgid != 0:
 func (${msg.name}) MessageId() int { return ${msg.msgid} }
 % endif

@@ -7,6 +7,7 @@ package binder
 import "C"
 import "bytes"
 import "encoding/binary"
+import "errors"
 import "math"
 import "time"
 import "unsafe"
@@ -45,6 +46,19 @@ func (self Binder) ByteString(off uint, size uint) string {
 		slice = slice[:idx]
 	}
 	return string(slice)
+}
+
+func (self Binder) SetByteString(data string, off uint, maxsize uint) error {
+	size := uint(len(data))
+	if size > maxsize {
+		return errors.New("String too large")
+	}
+	slice := self.data[off : off+maxsize]
+	copy(slice, data)
+	for i := size; i < maxsize; i++ {
+		slice[i] = 0
+	}
+	return nil
 }
 
 func (self Binder) PointerDefault(off uint) *PointerDefault {
@@ -116,11 +130,19 @@ func (self PointerLegacyLong) Offset() uint          { return uint(self.offset) 
 func (self PointerLegacyLong) Entity(size uint) uint { return uint(self.entity) }
 func (self PointerLegacyLong) Size() uint            { return uint(self.size) }
 
-func DurationCast(v, mul, div int64) time.Duration {
+func DurationFrom(v, mul, div int64) time.Duration {
 	return time.Duration(v * (mul * 1000000000 / div))
 }
 
-func TimeCast(v, mul, div int64) time.Time {
+func DurationInto(v time.Duration, mul, div int64) int64 {
+	return int64(v) / (mul * 1000000000 / div)
+}
+
+func TimeFrom(v, mul, div int64) time.Time {
 	ns := v * (mul * 1000000000 / div)
 	return time.Unix(ns/1000000000, ns%1000000000).In(time.UTC)
+}
+
+func TimeInto(v time.Time, mul, div int64) int64 {
+	return v.UnixNano() / (mul * 1000000000 / div)
 }
