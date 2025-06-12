@@ -52,7 +52,7 @@ func TestEcho(t *testing.T) {
 	c.CallbackAdd(func(c Channel, m Message) int {
 		println("Tick")
 		return 0
-	}, 0xFFFF)
+	}, MessageMaskAll)
 	c.Open()
 	c.Process()
 	c.Process()

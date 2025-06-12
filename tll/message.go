@@ -16,6 +16,14 @@ const (
 	MessageControl int = C.TLL_MESSAGE_CONTROL
 )
 
+const (
+	MessageMaskData    uint = C.TLL_MESSAGE_MASK_DATA
+	MessageMaskState   uint = C.TLL_MESSAGE_MASK_STATE
+	MessageMaskControl uint = C.TLL_MESSAGE_MASK_CONTROL
+	MessageMaskChannel uint = C.TLL_MESSAGE_MASK_CHANNEL
+	MessageMaskAll     uint = C.TLL_MESSAGE_MASK_ALL
+)
+
 type Message struct {
 	ptr *C.tll_msg_t
 }

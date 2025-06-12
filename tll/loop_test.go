@@ -14,16 +14,13 @@ func TestLoop(t *testing.T) {
 	c := ctx.Channel("zero://;name=test;dump=frame")
 	defer c.Free()
 
-
 	loop.Add(*c)
 	count := 0
 	c.CallbackAdd(func(c Channel, m Message) int {
-		if m.Type() == MessageData {
-			println("Tick")
-			count++
-		}
+		println("Tick")
+		count++
 		return 0
-	}, 0xFFFF)
+	}, MessageMaskData)
 	c.Open()
 	loop.Step(time.Duration(0))
 	assertEqual(t, count, 1)

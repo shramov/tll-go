@@ -36,7 +36,7 @@ func (self *Prefix) InitPrefix(impl ChannelPrefixImpl, url ConstConfig, ctx Cont
 		return err
 	}
 	self.child = *child
-	self.child.CallbackAdd(func(c Channel, m Message) int { return prefixCallback(impl, m) }, 0xff)
+	self.child.CallbackAdd(func(c Channel, m Message) int { return prefixCallback(impl, m) }, MessageMaskAll)
 	self.ChildAdd(self.child, "child")
 	return nil
 }
