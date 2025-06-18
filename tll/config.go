@@ -34,7 +34,7 @@ func (self Config) Ref() Config {
 	return Config{self.ConstConfig.Ref()}
 }
 
-func (self *ConstConfig) Unref() {
+func (self *ConstConfig) Free() {
 	C.tll_config_unref(self.ptr)
 	self.ptr = nil
 }
@@ -100,7 +100,7 @@ func (self ConstConfig) GetUrl(key string) (*Config, error) {
 	}
 	rc := Config{ConstConfig{r}}
 	if v := rc.Value(); v != nil {
-		rc.Unref()
+		rc.Free()
 		return nil, errors.New(*v)
 	}
 	return &rc, nil

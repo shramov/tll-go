@@ -20,9 +20,9 @@ type BrowseResult struct {
 	List []BrowsePair
 }
 
-func (self *BrowseResult) Unref() {
+func (self *BrowseResult) Free() {
 	for _, i := range self.List {
-		i.Cfg.Unref()
+		i.Cfg.Free()
 	}
 }
 

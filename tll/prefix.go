@@ -16,7 +16,7 @@ type Prefix struct {
 
 func (self *Prefix) InitPrefix(impl ChannelPrefixImpl, url ConstConfig, ctx Context) error {
 	curl := url.Copy()
-	defer curl.Unref()
+	defer curl.Free()
 	proto := curl.Get("tll.proto")
 	if proto == nil {
 		return errors.New("No proto in url")

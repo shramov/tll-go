@@ -5,7 +5,7 @@ import "time"
 
 func TestLoop(t *testing.T) {
 	cfg := NewConfig()
-	defer cfg.Unref()
+	defer cfg.Free()
 
 	ctx := Context{}
 	defer ctx.Free()
