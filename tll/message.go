@@ -36,6 +36,10 @@ func (self Message) MsgId() int {
 	return int(self.ptr.msgid)
 }
 
+func (self Message) Seq() int64 {
+	return int64(self.ptr.seq)
+}
+
 func (self Message) Data() []byte {
 	return unsafe.Slice((*byte)(self.ptr.data), self.ptr.size)
 }
@@ -59,6 +63,7 @@ func (self Message) Copy() GoMessage {
 type GoMessage struct {
 	Type int
 	Id   int
+	Seq  int64
 	Data []byte
 	Addr int64
 }
@@ -67,6 +72,7 @@ func (self *GoMessage) AsMsg(pinner *runtime.Pinner) Message {
 	ptr := &C.tll_msg_t{
 		msgid: C.int(self.Id),
 		_type: C.short(self.Type),
+		seq:   C.longlong(self.Seq),
 		size:  C.size_t(len(self.Data)),
 	}
 	*(*int64)(unsafe.Pointer(&ptr.addr[0])) = self.Addr
