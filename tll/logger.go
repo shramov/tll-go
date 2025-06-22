@@ -30,6 +30,10 @@ func NewLogger(name string) *Logger {
 	return &Logger{ptr}
 }
 
+func LoggerConfig(cfg ConstConfig) {
+	C.tll_logger_config(cfg.ptr)
+}
+
 func (self Logger) Log(level LoggerLevel, s string) {
 	if level < LoggerLevel(self.ptr.level) {
 		return
