@@ -26,6 +26,14 @@ func LoadConfig(url string) *Config {
 	return &Config{ConstConfig{ptr}}
 }
 
+func LoadConfigData(proto string, body string) *Config {
+	ptr := C.tll_config_load_data(C._GoStringPtr(proto), C.int(len(proto)), C._GoStringPtr(body), C.int(len(body)))
+	if ptr == nil {
+		return nil
+	}
+	return &Config{ConstConfig{ptr}}
+}
+
 func (self ConstConfig) Ref() ConstConfig {
 	return ConstConfig{C.tll_config_ref(self.ptr)}
 }

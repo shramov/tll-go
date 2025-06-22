@@ -26,3 +26,10 @@ func TestConfig(t *testing.T) {
 	assertEqual(t, *r.List[1].Cfg.Value(), "1")
 	assertEqual(t, *r.List[2].Cfg.Value(), "2")
 }
+
+func TestConfigLoad(t *testing.T) {
+	cfg := LoadConfigData("yamls", "{a: b, c: d}")
+	defer cfg.Free()
+	assertEqual(t, *cfg.Get("a"), "b")
+	assertEqual(t, *cfg.Get("c"), "d")
+}
