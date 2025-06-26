@@ -23,8 +23,9 @@ type Settings struct {
 
 type Reader struct {
 	Settings
-	loop tll.Loop
+	loop  tll.Loop
 	count uint64
+	index int
 }
 
 func (self *Reader) onData(c tll.Channel, m tll.Message) int {
@@ -45,7 +46,7 @@ func (self *Reader) Run() {
 	self.loop = *tll.NewLoop(cfg.ConstConfig)
 	defer self.loop.Free()
 
-	r := self.ctx.Channel(fmt.Sprintf("file://%s/file.dat;autoclose=no;io=%s;dump=no;name=reader-%d", self.base, self.io, 0))
+	r := self.ctx.Channel(fmt.Sprintf("file://%s/file.dat;autoclose=no;io=%s;dump=no;name=reader-%d", self.base, self.io, self.index))
 	self.loop.Add(*r)
 	defer r.Free()
 	r.CallbackAdd(self.onData, tll.MessageMaskData)
@@ -60,13 +61,13 @@ func (self *Reader) Run() {
 	defer ocfg.Free()
 	ocfg.Set("mode", "last")
 
-	reopen := self.ctx.Channel(fmt.Sprintf("pub+mem://%s/reopen;dump=frame;name=reopen-%d", self.base, 0))
+	reopen := self.ctx.Channel(fmt.Sprintf("pub+mem://%s/reopen;dump=frame;name=reopen-%d", self.base, self.index))
 	self.loop.Add(*reopen)
 	defer reopen.Free()
 	reopen.CallbackAdd(func(c tll.Channel, m tll.Message) int {
 		r.Close()
 		if self.count > 0 {
-			fmt.Printf("Checked %d messages\n", self.count)
+			fmt.Printf("Reader %d: Checked %d messages\n", self.index, self.count)
 		}
 		self.count = 0
 		r.OpenCfg(&ocfg.ConstConfig)
@@ -83,6 +84,7 @@ func main() {
 	wio := flag.String("wio", "mmap", "writer io")
 	wextra := flag.String("extra-space", "1mb", "writer extra space")
 	flag.StringVar(&s.io, "rio", "mmap", "reader io")
+	rcount := flag.Uint("count", 1, "Number of readers")
 
 	flag.Parse()
 
@@ -119,8 +121,12 @@ func main() {
 	pinner := runtime.Pinner{}
 	msg := tll.GoMessage{}
 	empty := make([]byte, 0)
-	reader := Reader{Settings: s}
-	go reader.Run()
+	readers := make([]Reader, int(*rcount))
+	for i := range len(readers) {
+		readers[i].Settings = s
+		readers[i].index = i
+		go readers[i].Run()
+	}
 	for range 100 {
 		w.OpenCfg(&ocfg.ConstConfig)
 
@@ -138,5 +144,7 @@ func main() {
 		}
 		w.Close()
 	}
-	reader.loop.SetStop(1)
+	for i := range len(readers) {
+		readers[i].loop.SetStop(1)
+	}
 }
