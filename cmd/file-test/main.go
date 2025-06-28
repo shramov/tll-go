@@ -3,7 +3,7 @@ package main
 import "bytes"
 import "flag"
 import "fmt"
-import "math/rand/v2"
+import "math/rand"
 import "runtime"
 import "time"
 
@@ -98,11 +98,10 @@ func main() {
 
 	s.base = "/tmp/"
 	s.data = make([]Message, 8192)
-	seed := [32]byte{0, 1, 2, 3}
-	prng := rand.NewChaCha8(seed)
+	prng := rand.New(rand.NewSource(0xdeadbeef))
 	for i := range len(s.data) {
 		m := Message{seq: int64(i)}
-		m.data = make([]byte, rand.Int32N(1024))
+		m.data = make([]byte, rand.Int31n(1024))
 		prng.Read(m.data)
 		s.data[i] = m
 	}
