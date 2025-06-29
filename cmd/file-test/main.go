@@ -10,8 +10,9 @@ import "time"
 import "github.com/shramov/tll-go/tll"
 
 type Message struct {
-	seq  int64
-	data []byte
+	seq   int64
+	msgid int
+	data  []byte
 }
 
 type Settings struct {
@@ -31,9 +32,9 @@ type Reader struct {
 func (self *Reader) onData(c tll.Channel, m tll.Message) int {
 	msg := self.data[m.Seq()%int64(len(self.data))]
 	if !bytes.Equal(msg.data, m.Data()) {
-		println("Expected", msg.data, msg.data[0])
-		println("Got", m.Data(), m.Data()[0])
-		println("Error on seq", m.Seq())
+		println("Expected", msg.msgid, msg.data, msg.data[0])
+		println("Got", m.MsgId(), m.Data(), m.Data()[0])
+		println("Error on seq", m.Seq(), "after", self.count, "messages")
 		panic(fmt.Sprintf("Error on seq %d", m.Seq()))
 	}
 	self.count++
@@ -102,11 +103,12 @@ func main() {
 	for i := range len(s.data) {
 		m := Message{seq: int64(i)}
 		m.data = make([]byte, rand.Int31n(1024))
+		m.msgid = len(m.data)
 		prng.Read(m.data)
 		s.data[i] = m
 	}
 
-	wcfg := tll.LoadConfigData("url", "file:///tmp/file.dat;dir=w;name=writer;dump=no")
+	wcfg := tll.LoadConfigData("url", "file:///tmp/file.dat;dir=w;name=writer;dump=no;version=1")
 	wcfg.Set("io", *wio)
 	wcfg.Set("extra-space", *wextra)
 	w := s.ctx.ChannelCfg(wcfg.ConstConfig)
@@ -136,6 +138,7 @@ func main() {
 		for i := range 1000000 {
 			m := s.data[i%8192]
 			msg.Seq = int64(i)
+			msg.Id = m.msgid
 			msg.Data = m.data
 			cmsg := msg.AsMsg(&pinner)
 			w.Post(cmsg)
