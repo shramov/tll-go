@@ -17,6 +17,7 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
+        cache-dependency-path: ./go.sum
     - name: update
       run: |
         echo deb https://psha.org.ru/debian/ `echo ${{ matrix.os }} | tr -d -` contrib backports | sudo tee /etc/apt/sources.list.d/psha.org.ru.list
