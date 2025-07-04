@@ -1,0 +1,34 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-22.04]
+        go-version: [1.22]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        submodules: true
+    - uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.go-version }}
+        cache-dependency-path: ./go.sum
+    - name: update
+      run: |
+        echo deb https://psha.org.ru/debian/ `echo ${{ matrix.os }} | tr -d -` contrib backports | sudo tee /etc/apt/sources.list.d/psha.org.ru.list
+        sudo wget -O/etc/apt/trusted.gpg.d/psha.org.ru.gpg https://psha.org.ru/debian/pubkey.gpg
+        sudo apt update
+    - name: install deps
+      run: sudo apt install libtll-dev libfmt-dev
+    - name: install go deps
+      run: go get ./tll
+    - name: build
+      run: go build -v ./...
+    - name: test
+      run: go test -v ./tll
+# vim: sts=2 sw=2 et
