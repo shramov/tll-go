@@ -18,6 +18,10 @@ func NewContext() Context {
 	return Context{C.tll_channel_context_new(nil)}
 }
 
+func NewContextCfg(cfg ConstConfig) Context {
+	return Context{C.tll_channel_context_new(cfg.ptr)}
+}
+
 func (ctx Context) Ref() Context { return Context{C.tll_channel_context_ref(ctx.ptr)} }
 func (ctx *Context) Free() {
 	C.tll_channel_context_free(ctx.ptr)
