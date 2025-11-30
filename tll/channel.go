@@ -85,6 +85,17 @@ func (self Channel) State() State {
 	return State(self.ptr.internal.state)
 }
 
+func (self Channel) SchemeData() *Scheme    { return self.Scheme(MessageData) }
+func (self Channel) SchemeControl() *Scheme { return self.Scheme(MessageControl) }
+
+func (self Channel) Scheme(type_ int) *Scheme {
+	if ptr := C.tll_channel_scheme(self.ptr, C.int(type_)); ptr != nil {
+		return &Scheme{ptr}
+	} else {
+		return nil
+	}
+}
+
 func (self Channel) Post(m Message) int {
 	return int(C.tll_channel_post(self.ptr, m.ptr, 0))
 }
