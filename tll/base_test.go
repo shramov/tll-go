@@ -49,13 +49,15 @@ func TestEcho(t *testing.T) {
 		panic("Fail to init channel")
 	}
 	println(c.Name())
-	c.CallbackAdd(func(c Channel, m Message) int {
+	h := c.CallbackAdd(func(c Channel, m Message) int {
 		println("Tick")
 		return 0
 	}, MessageMaskAll)
 	c.Open()
 	c.Process()
 	c.Process()
+	println("Drop callback")
+	h.Free()
 	c.Process()
 	c.Free()
 }

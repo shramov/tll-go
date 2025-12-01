@@ -12,31 +12,51 @@ import "unsafe"
 
 //export GoCallback
 func GoCallback(c *C.tll_channel_t, m *C.tll_msg_t, data C.uintptr_t) C.int {
-	cb := cgo.Handle(data).Value().(Callback)
-	return C.int(cb(Channel{c}, Message{m}))
+	cb := cgo.Handle(data).Value().(*CallbackHandle)
+	return C.int(cb.cb(Channel{c}, Message{m}))
 }
 
 //export GoStateCallback
 func GoStateCallback(c *C.tll_channel_t, m *C.tll_msg_t, data C.uintptr_t) C.int {
-	if m.msgid != C.int(StateDestroy) { return 0 }
-	h := cgo.Handle(data)
-	C.tll_channel_callback_del(c, C.tll_channel_callback_t(C.GoCallback), unsafe.Pointer(h), C.unsigned(MessageMaskAll));
-	C.tll_channel_callback_del(c, C.tll_channel_callback_t(C.GoStateCallback), unsafe.Pointer(h), C.unsigned(MessageMaskState));
+	if m.msgid != C.int(StateDestroy) {
+		return 0
+	}
+	h := cgo.Handle(data).Value().(*CallbackHandle)
+	h.Free()
 	return 0
 }
 
 type Callback func(Channel, Message) int
 
-func (self Channel) CallbackAdd(cb Callback, mask uint) int {
-	h := cgo.NewHandle(cb)
+type CallbackHandle struct {
+	cb      Callback
+	channel *Channel
+	handle  cgo.Handle
+}
+
+func (self *CallbackHandle) Free() {
+	if self.channel == nil {
+		return
+	}
+	C.tll_channel_callback_del(self.channel.ptr, C.tll_channel_callback_t(C.GoCallback), unsafe.Pointer(self.handle), C.unsigned(MessageMaskAll))
+	C.tll_channel_callback_del(self.channel.ptr, C.tll_channel_callback_t(C.GoStateCallback), unsafe.Pointer(self.handle), C.unsigned(MessageMaskState))
+	self.handle.Delete()
+	self.channel = nil
+	self.cb = nil
+}
+
+func (self Channel) CallbackAdd(cb Callback, mask uint) *CallbackHandle {
+	cbh := CallbackHandle{cb, &self, 0}
+	h := cgo.NewHandle(&cbh)
 	if C.tll_channel_callback_add(self.ptr, C.tll_channel_callback_t(C.GoCallback), unsafe.Pointer(h), C.unsigned(mask)) != 0 {
 		h.Delete()
-		return -1
+		return nil
 	}
 	if C.tll_channel_callback_add(self.ptr, C.tll_channel_callback_t(C.GoStateCallback), unsafe.Pointer(h), C.unsigned(MessageMaskState)) != 0 {
-		C.tll_channel_callback_del(self.ptr, C.tll_channel_callback_t(C.GoCallback), unsafe.Pointer(h), C.unsigned(mask));
+		C.tll_channel_callback_del(self.ptr, C.tll_channel_callback_t(C.GoCallback), unsafe.Pointer(h), C.unsigned(mask))
 		h.Delete()
-		return -1
+		return nil
 	}
-	return 0
+	cbh.handle = h
+	return &cbh
 }
