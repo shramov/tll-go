@@ -34,6 +34,14 @@ func LoadConfigData(proto string, body string) *Config {
 	return &Config{ConstConfig{ptr}}
 }
 
+func ConfigFromMap(settings map[string]string) *Config {
+	c := NewConfig()
+	for k, v := range(settings) {
+		c.Set(k, v)
+	}
+	return c
+}
+
 func (self ConstConfig) Ref() ConstConfig {
 	return ConstConfig{C.tll_config_ref(self.ptr)}
 }

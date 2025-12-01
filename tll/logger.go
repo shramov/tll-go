@@ -34,6 +34,12 @@ func LoggerConfig(cfg ConstConfig) {
 	C.tll_logger_config(cfg.ptr)
 }
 
+func LoggerConfigMap(settings map[string]string) {
+	c := ConfigFromMap(settings)
+	defer c.Free()
+	C.tll_logger_config(c.ptr)
+}
+
 func (self Logger) Log(level LoggerLevel, s string) {
 	if level < LoggerLevel(self.ptr.level) {
 		return
