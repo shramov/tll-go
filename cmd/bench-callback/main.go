@@ -5,6 +5,10 @@ import "testing"
 
 import "github.com/shramov/tll-go/tll"
 
+type B struct {
+	*testing.B
+}
+
 func BenchmarkCallback(b *testing.B) {
 	ctx := tll.NewContext()
 	defer ctx.Free()
@@ -18,7 +22,8 @@ func BenchmarkCallback(b *testing.B) {
 	}, tll.MessageMaskData)
 	c.Open()
 
-	for b.Loop() {
+	wrapb := B{b}
+	for wrapb.Loop() {
 		c.Process()
 	}
 }
