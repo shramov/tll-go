@@ -52,7 +52,7 @@ func (self Message) Copy() GoMessage {
 	if self.ptr == nil {
 		return GoMessage{}
 	}
-	r := GoMessage{Id: int(self.ptr.msgid), Type: int(self.ptr._type), Addr: self.Addr()}
+	r := GoMessage{Id: int(self.ptr.msgid), Type: int(self.ptr._type), Addr: self.Addr(), Seq: self.Seq()}
 	if self.ptr.data != nil {
 		r.Data = C.GoBytes(self.ptr.data, C.int(self.ptr.size))
 	}
