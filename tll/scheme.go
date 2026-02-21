@@ -5,9 +5,17 @@ package tll
 #include <tll/scheme.h>
 */
 import "C"
+import "fmt"
 
 type Scheme struct{ ptr *C.tll_scheme_t }
 type SchemeMessage struct{ ptr *C.tll_scheme_message_t }
+
+func (self *SchemeMessage) String() string {
+	if self.ptr == nil {
+		return fmt.Sprintf("SchemeMessage{ nil }")
+	}
+	return fmt.Sprintf("SchemeMessage{ name: %s }", self.Name())
+}
 
 func NewScheme(url string) *Scheme {
 	ptr := C.tll_scheme_load(C._GoStringPtr(url), C.int(len(url)))
