@@ -52,7 +52,7 @@ func (self Context) Get(name string) *Channel {
 	return &Channel{ptr}
 }
 
-func (self Channel) Free() {
+func (self *Channel) Free() {
 	C.tll_channel_free(self.ptr)
 	self.ptr = nil
 }
@@ -62,6 +62,9 @@ func (self Channel) Open() int {
 }
 
 func (self Channel) OpenCfg(cfg *ConstConfig) int {
+	if cfg == nil {
+		return int(C.tll_channel_open_cfg(self.ptr, nil))
+	}
 	return int(C.tll_channel_open_cfg(self.ptr, cfg.ptr))
 }
 
