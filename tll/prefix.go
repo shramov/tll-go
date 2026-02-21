@@ -33,6 +33,7 @@ func (self *Prefix) InitPrefix(impl ChannelPrefixImpl, url ConstConfig, ctx Cont
 	}
 
 	if err := self.InitBase(url, ctx); err != nil {
+		child.CloseForce(true)
 		return err
 	}
 	self.child = *child
@@ -74,7 +75,6 @@ func prefixCallback(self ChannelPrefixImpl, m Message) int {
 	default:
 		return self.OnOther(m)
 	}
-	return 0
 }
 
 func (self *Prefix) Open(cfg ConstConfig) int {
