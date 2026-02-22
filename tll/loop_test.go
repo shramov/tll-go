@@ -4,12 +4,9 @@ import "testing"
 import "time"
 
 func TestLoop(t *testing.T) {
-	cfg := NewConfig()
-	defer cfg.Free()
-
 	ctx := Context{}
 	defer ctx.Free()
-	loop := NewLoop(cfg.ConstConfig)
+	loop := NewLoop()
 	defer loop.Free()
 	c := ctx.Channel("zero://;name=test;dump=frame")
 	defer c.Free()

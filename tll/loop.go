@@ -11,7 +11,20 @@ type Loop struct {
 	ptr *C.tll_processor_loop_t
 }
 
-func NewLoop(cfg ConstConfig) *Loop {
+// Create new Loop
+func NewLoop() *Loop {
+	if ptr := C.tll_processor_loop_new_cfg(nil); ptr != nil {
+		return &Loop{ptr}
+	}
+	return nil
+}
+
+// Create new Loop with parameters, config parameter is consumed and may be nil
+func NewLoopCfg(cfg *ConstConfig) *Loop {
+	if cfg == nil {
+		return NewLoop()
+	}
+	defer cfg.Free()
 	if ptr := C.tll_processor_loop_new_cfg(cfg.ptr); ptr != nil {
 		return &Loop{ptr}
 	}

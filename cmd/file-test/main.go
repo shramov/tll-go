@@ -44,7 +44,7 @@ func (self *Reader) onData(c tll.Channel, m tll.Message) int {
 func (self *Reader) Run() {
 	cfg := tll.NewConfig()
 	cfg.Set("poll", "no")
-	self.loop = *tll.NewLoop(cfg.ConstConfig)
+	self.loop = *tll.NewLoopCfg(&cfg.ConstConfig)
 	defer self.loop.Free()
 
 	r := self.ctx.Channel(fmt.Sprintf("file://%s/file.dat;autoclose=no;io=%s;dump=no;name=reader-%d", self.base, self.io, self.index))
