@@ -7,13 +7,14 @@ extern int GoCallback(tll_channel_t *, tll_msg_t *, uintptr_t);
 extern int GoStateCallback(tll_channel_t *, tll_msg_t *, uintptr_t);
 */
 import "C"
+import "runtime"
 import "runtime/cgo"
 import "unsafe"
 
 //export GoCallback
 func GoCallback(c *C.tll_channel_t, m *C.tll_msg_t, data C.uintptr_t) C.int {
 	cb := cgo.Handle(data).Value().(*CallbackHandle)
-	return C.int(cb.cb(Channel{c}, Message{m}))
+	return C.int(cb.cb(Channel{c, runtime.Pinner{}}, Message{m}))
 }
 
 //export GoStateCallback

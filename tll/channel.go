@@ -6,12 +6,15 @@ package tll
 */
 import "C"
 
+import "runtime"
+
 type Context struct {
 	ptr *C.tll_channel_context_t
 }
 
 type Channel struct {
 	ptr *C.tll_channel_t
+	pinner runtime.Pinner
 }
 
 func NewContext() Context {
@@ -33,7 +36,7 @@ func (ctx Context) Channel(url string) *Channel {
 	if ptr == nil {
 		return nil
 	}
-	return &Channel{ptr}
+	return &Channel{ptr, runtime.Pinner{}}
 }
 
 func (ctx Context) ChannelCfg(cfg ConstConfig) *Channel {
@@ -41,7 +44,7 @@ func (ctx Context) ChannelCfg(cfg ConstConfig) *Channel {
 	if ptr == nil {
 		return nil
 	}
-	return &Channel{ptr}
+	return &Channel{ptr, runtime.Pinner{}}
 }
 
 func (self Context) Get(name string) *Channel {
@@ -49,7 +52,7 @@ func (self Context) Get(name string) *Channel {
 	if ptr == nil {
 		return nil
 	}
-	return &Channel{ptr}
+	return &Channel{ptr, runtime.Pinner{}}
 }
 
 func (self *Channel) Free() {
@@ -101,6 +104,12 @@ func (self Channel) Scheme(type_ int) *Scheme {
 
 func (self Channel) Post(m Message) int {
 	return int(C.tll_channel_post(self.ptr, m.ptr, 0))
+}
+
+func (self Channel) PostGo(m GoMessage) int {
+	cmsg := m.AsMsg(&self.pinner)
+	defer self.pinner.Unpin()
+	return self.Post(cmsg)
 }
 
 func (self Channel) Process() int {
