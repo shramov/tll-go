@@ -7,6 +7,7 @@ extern int GoCallback(tll_channel_t *, tll_msg_t *, uintptr_t);
 extern int GoStateCallback(tll_channel_t *, tll_msg_t *, uintptr_t);
 */
 import "C"
+import "context"
 import "runtime"
 import "runtime/cgo"
 import "unsafe"
@@ -61,3 +62,32 @@ func (self Channel) CallbackAdd(cb Callback, mask uint) *CallbackHandle {
 	cbh.handle = h
 	return &cbh
 }
+
+type ChanCallback struct {
+	ch     chan GoMessage
+	ctx    context.Context
+	handle *CallbackHandle
+}
+
+func (self *ChanCallback) Push(c Channel, m Message) int {
+	if self.ch == nil {
+		return 0
+	}
+	select {
+	case self.ch <- m.Copy():
+		break
+	case <-self.ctx.Done():
+		self.handle.Free()
+		close(self.ch)
+		self.ch = nil
+	}
+	return 0
+}
+
+func (self Channel) ChanAddBuffered(ctx context.Context, size int, mask uint) <-chan GoMessage {
+	r := ChanCallback{ch: make(chan GoMessage, size), ctx: ctx}
+	r.handle = self.CallbackAdd(r.Push, mask)
+	return r.ch
+}
+
+func (self Channel) ChanAdd(ctx context.Context, mask uint) <-chan GoMessage { return self.ChanAddBuffered(ctx, 0, mask) }

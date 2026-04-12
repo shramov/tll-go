@@ -1,5 +1,6 @@
 package main
 
+import "context"
 import "fmt"
 import "testing"
 
@@ -28,7 +29,49 @@ func BenchmarkCallback(b *testing.B) {
 	}
 }
 
+func BenchmarkChan(b *testing.B, bufsize int) {
+	ctx := tll.NewContext()
+	defer ctx.Free()
+	c := ctx.Channel("zero://;name=test")
+	defer c.Free()
+
+	c.Open()
+
+	count := 0
+	cctx, cancel := context.WithCancel(context.Background())
+	ch := c.ChanAddBuffered(cctx, bufsize, tll.MessageMaskData)
+	defer cancel()
+
+
+	done := make(chan bool)
+	stop := false
+	go func() {
+		for !stop {
+			c.Process()
+		}
+		done <- true
+	}()
+
+	wrapb := B{b}
+	for wrapb.Loop() {
+		//c.Process()
+		<- ch
+		count++
+	}
+	b.StopTimer()
+	cancel()
+	stop = true
+	<-done
+
+	if count != b.N {
+		fmt.Printf("Count mismatch: iteration %d != callback calls %d\n", b.N, count)
+	}
+}
+
 func main() {
 	tll.LoggerConfigMap(map[string]string{"type": "spdlog", "levels.tll": "warning"})
 	fmt.Println("Callback: ", testing.Benchmark(BenchmarkCallback))
+	for _, s := range([]int{0, 1, 2, 4, 8, 16}) {
+		fmt.Printf("Channel: %2d %v\n", s, testing.Benchmark(func(b *testing.B) { BenchmarkChan(b, s) }))
+	}
 }
