@@ -27,7 +27,7 @@ func (self *Prefix) InitPrefix(impl ChannelPrefixImpl, url ConstConfig, ctx Cont
 		return errors.New("No + separator in protocol")
 	}
 	self.ChildUrlFill(*curl, "go-prefix")
-	child := ctx.ChannelCfg(curl.ConstConfig)
+	child := ctx.ChannelCfg(curl)
 	if child == nil {
 		return errors.New("Failed to create child channel")
 	}

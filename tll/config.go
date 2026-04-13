@@ -10,6 +10,13 @@ import "errors"
 type ConstConfig struct{ ptr *C.tll_config_t }
 type Config struct{ ConstConfig }
 
+type  Configlike interface {
+	AsConstConfig() ConstConfig
+}
+
+func (self ConstConfig) AsConstConfig() ConstConfig { return self }
+func (self Config) AsConstConfig() ConstConfig { return self.ConstConfig }
+
 func NewConfig() *Config {
 	ptr := C.tll_config_new()
 	if ptr == nil {

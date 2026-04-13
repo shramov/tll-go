@@ -21,8 +21,8 @@ func NewContext() Context {
 	return Context{C.tll_channel_context_new(nil)}
 }
 
-func NewContextCfg(cfg ConstConfig) Context {
-	return Context{C.tll_channel_context_new(cfg.ptr)}
+func NewContextCfg(cfg Configlike) Context {
+	return Context{C.tll_channel_context_new(cfg.AsConstConfig().ptr)}
 }
 
 func (ctx Context) Ref() Context { return Context{C.tll_channel_context_ref(ctx.ptr)} }
@@ -39,8 +39,8 @@ func (ctx Context) Channel(url string) *Channel {
 	return &Channel{ptr, runtime.Pinner{}}
 }
 
-func (ctx Context) ChannelCfg(cfg ConstConfig) *Channel {
-	ptr := C.tll_channel_new_url(ctx.ptr, cfg.ptr, nil, nil)
+func (ctx Context) ChannelCfg(cfg Configlike) *Channel {
+	ptr := C.tll_channel_new_url(ctx.ptr, cfg.AsConstConfig().ptr, nil, nil)
 	if ptr == nil {
 		return nil
 	}

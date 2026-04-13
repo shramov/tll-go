@@ -30,8 +30,8 @@ func NewLogger(name string) *Logger {
 	return &Logger{ptr}
 }
 
-func LoggerConfig(cfg ConstConfig) {
-	C.tll_logger_config(cfg.ptr)
+func LoggerConfig(cfg Configlike) {
+	C.tll_logger_config(cfg.AsConstConfig().ptr)
 }
 
 func LoggerConfigMap(settings map[string]string) {
