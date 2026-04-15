@@ -3,7 +3,9 @@ package tll
 import "testing"
 
 func TestCreate(t *testing.T) {
-	ctx := Context{}
+	ctx := NewContext()
+	defer ctx.Free()
+
 	c := ctx.Channel("zero://;name=test;dump=frame")
 	println(c.Name())
 	c.CallbackAdd(func(c Channel, m Message) int {
