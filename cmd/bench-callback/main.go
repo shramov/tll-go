@@ -17,15 +17,20 @@ func BenchmarkCallback(b *testing.B) {
 	defer c.Free()
 
 	count := 0
-	c.CallbackAdd(func(c tll.Channel, m tll.Message) int {
+	cbh := c.CallbackAdd(func(c tll.Channel, m tll.Message) int {
 		count += 1
 		return 0
 	}, tll.MessageMaskData)
+	defer cbh.Free()
+
 	c.Open()
 
 	wrapb := B{b}
 	for wrapb.Loop() {
 		c.Process()
+	}
+	if count != b.N {
+		fmt.Printf("Count mismatch: iteration %d != callback calls %d\n", b.N, count)
 	}
 }
 
