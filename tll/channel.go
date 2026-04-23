@@ -7,6 +7,7 @@ package tll
 import "C"
 
 import "runtime"
+import "syscall"
 
 type Context struct {
 	ptr *C.tll_channel_context_t
@@ -60,27 +61,27 @@ func (self *Channel) Free() {
 	self.ptr = nil
 }
 
-func (self Channel) Open() int {
-	return int(C.tll_channel_open(self.ptr, nil, 0))
+func (self Channel) Open() error {
+	return cint2error(C.tll_channel_open(self.ptr, nil, 0))
 }
 
-func (self Channel) OpenCfg(cfg *ConstConfig) int {
+func (self Channel) OpenCfg(cfg *ConstConfig) error {
 	if cfg == nil {
-		return int(C.tll_channel_open_cfg(self.ptr, nil))
+		return cint2error(C.tll_channel_open_cfg(self.ptr, nil))
 	}
-	return int(C.tll_channel_open_cfg(self.ptr, cfg.ptr))
+	return cint2error(C.tll_channel_open_cfg(self.ptr, cfg.ptr))
 }
 
-func (self Channel) Close() int {
-	return int(C.tll_channel_close(self.ptr, 0))
+func (self Channel) Close() error {
+	return cint2error(C.tll_channel_close(self.ptr, 0))
 }
 
-func (self Channel) CloseForce(force bool) int {
+func (self Channel) CloseForce(force bool) error {
 	fi := 0
 	if force {
 		fi = 1
 	}
-	return int(C.tll_channel_close(self.ptr, C.int(fi)))
+	return cint2error(C.tll_channel_close(self.ptr, C.int(fi)))
 }
 
 func (self Channel) Name() string {
@@ -102,16 +103,20 @@ func (self Channel) Scheme(type_ int) *Scheme {
 	}
 }
 
-func (self Channel) Post(m Message) int {
-	return int(C.tll_channel_post(self.ptr, m.ptr, 0))
+func (self Channel) Post(m Message) error {
+	return cint2error(C.tll_channel_post(self.ptr, m.ptr, 0))
 }
 
-func (self Channel) PostGo(m GoMessage) int {
+func (self Channel) PostGo(m GoMessage) error {
 	cmsg := m.AsMsg(&self.pinner)
 	defer self.pinner.Unpin()
 	return self.Post(cmsg)
 }
 
-func (self Channel) Process() int {
-	return int(C.tll_channel_process(self.ptr, 0, 0))
+func (self Channel) Process() error {
+	if r := int(C.tll_channel_process(self.ptr, 0, 0)); r == 0 || r == int(syscall.EAGAIN) {
+		return nil
+	} else {
+		return Errno(r)
+	}
 }

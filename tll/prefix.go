@@ -77,16 +77,16 @@ func prefixCallback(self ChannelPrefixImpl, m Message) int {
 	}
 }
 
-func (self *Prefix) Open(cfg ConstConfig) int {
+func (self *Prefix) Open(cfg ConstConfig) error {
 	return self.child.OpenCfg(&cfg)
 }
 
-func (self *Prefix) Close(force bool) int {
+func (self *Prefix) Close(force bool) error {
 	return self.child.CloseForce(force)
 }
 
 func (self *Prefix) Post(m Message) error {
-	if r := self.child.Post(m); r != 0 {
+	if err := self.child.Post(m); err != nil {
 		return errors.New("Child post failed")
 	}
 	return nil
