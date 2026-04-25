@@ -100,8 +100,8 @@ type ChannelImpl interface {
 	GetBase() *Base
 	Init(cfg ConstConfig, ctx Context) (ChannelImpl, error)
 	Free()
-	Open(cfg ConstConfig) int
-	Close(bool) int
+	Open(cfg ConstConfig) error
+	Close(bool) error
 	Process() int
 	Post(Message) error
 }
@@ -161,12 +161,12 @@ func (self *Base) CallbackData(m Message) {
 	C.tll_channel_callback_data(self.internal, m.ptr)
 }
 
-func (self *Base) ChildAdd(c Channel, tag string) int {
-	return int(C.tll_channel_internal_child_add(self.internal, c.ptr, nil, 0))
+func (self *Base) ChildAdd(c Channel, tag string) error {
+	return cint2error(C.tll_channel_internal_child_add(self.internal, c.ptr, nil, 0))
 }
 
-func (self *Base) ChildDel(c Channel, tag string) int {
-	return int(C.tll_channel_internal_child_del(self.internal, c.ptr, nil, 0))
+func (self *Base) ChildDel(c Channel, tag string) error {
+	return cint2error(C.tll_channel_internal_child_del(self.internal, c.ptr, nil, 0))
 }
 
 func (self *Base) ChildUrlFill(cfg Config, tag string) {
@@ -177,14 +177,14 @@ func (self *Base) ChildUrlFill(cfg Config, tag string) {
 func (self *Base) GetBase() *Base { return self }
 func (*Base) Free()               {}
 
-func (self *Base) Open(ConstConfig) int {
+func (self *Base) Open(ConstConfig) error {
 	self.SetState(StateActive)
-	return 0
+	return nil
 }
 
-func (self *Base) Close(bool) int {
+func (self *Base) Close(bool) error {
 	self.SetState(StateClosed)
-	return 0
+	return nil
 }
 
 func (*Base) Process() int {
@@ -234,14 +234,22 @@ func _GoFree(c *C.tll_channel_t) {
 func _GoOpen(c *C.tll_channel_t, cfg *C.tll_config_t) C.int {
 	data := (*Base)(unsafe.Pointer(c.data))
 	data.SetState(StateOpening)
-	return C.int(data.impl.Open(ConstConfig{cfg}))
+	if err := data.impl.Open(ConstConfig{cfg}); err != nil {
+		return C.int(syscall.EINVAL)
+	} else {
+		return 0
+	}
 }
 
 //export _GoClose
 func _GoClose(c *C.tll_channel_t, force C.int) C.int {
 	data := (*Base)(unsafe.Pointer(c.data))
 	data.SetState(StateClosing)
-	return C.int(data.impl.Close(force != 0))
+	if err := data.impl.Close(force != 0); err != nil {
+		return C.int(syscall.EINVAL)
+	} else {
+		return 0
+	}
 }
 
 //export _GoProcess
@@ -269,8 +277,8 @@ func CreateImpl[I ChannelImpl]() *Impl {
 	return impl
 }
 
-func (ctx Context) register(impl *Impl) int {
-	return int(C.tll_channel_impl_register(ctx.ptr, impl.impl, nil))
+func (ctx Context) register(impl *Impl) error {
+	return cint2error(C.tll_channel_impl_register(ctx.ptr, impl.impl, nil))
 }
 
 type CModule C.tll_channel_module_t

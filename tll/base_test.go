@@ -17,14 +17,14 @@ func (self *Echo) Free() {
 	println("Free")
 }
 
-func (self *Echo) Open(ConstConfig) int {
+func (self *Echo) Open(ConstConfig) error {
 	println("Open")
-	return 0
+	return nil 
 }
 
-func (self *Echo) Close(bool) int {
+func (self *Echo) Close(bool) error {
 	println("Close")
-	return 0
+	return nil
 }
 
 func (self *Echo) Process() int {
@@ -40,7 +40,7 @@ func (self *Echo) Post(m Message) error {
 func TestEcho(t *testing.T) {
 	ctx := NewContext()
 	impl := CreateImpl[*Echo]()
-	if ctx.register(impl) != 0 {
+	if err := ctx.register(impl); err != nil {
 		panic("Fail to register impl")
 	}
 
