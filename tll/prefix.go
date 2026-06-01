@@ -4,9 +4,9 @@ import "strings"
 import "errors"
 
 type ChannelPrefixImpl interface {
-	OnState(State) int
-	OnData(Message) int
-	OnOther(Message) int
+	OnState(State) error
+	OnData(Message) error
+	OnOther(Message) error
 }
 
 type Prefix struct {
@@ -42,7 +42,7 @@ func (self *Prefix) InitPrefix(impl ChannelPrefixImpl, url ConstConfig, ctx Cont
 	return nil
 }
 
-func (self *Prefix) OnState(s State) int {
+func (self *Prefix) OnState(s State) error {
 	switch s {
 	case StateActive:
 		self.SetState(s)
@@ -53,28 +53,29 @@ func (self *Prefix) OnState(s State) int {
 	default:
 		break
 	}
-	return 0
+	return nil
 }
 
-func (self *Prefix) OnData(m Message) int {
+func (self *Prefix) OnData(m Message) error {
 	self.CallbackData(m)
-	return 0
+	return nil
 }
 
-func (self *Prefix) OnOther(m Message) int {
+func (self *Prefix) OnOther(m Message) error {
 	self.Callback(m)
-	return 0
+	return nil
 }
 
 func prefixCallback(self ChannelPrefixImpl, m Message) int {
 	switch m.Type() {
 	case MessageData:
-		return self.OnData(m)
+		self.OnData(m)
 	case MessageState:
-		return self.OnState(State(m.MsgId()))
+		self.OnState(State(m.MsgId()))
 	default:
-		return self.OnOther(m)
+		self.OnOther(m)
 	}
+	return 0
 }
 
 func (self *Prefix) Open(cfg ConstConfig) error {
