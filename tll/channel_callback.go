@@ -3,8 +3,8 @@ package tll
 // #cgo pkg-config: tll
 /*
 #include <tll/channel.h>
-extern int GoCallback(tll_channel_t *, tll_msg_t *, uintptr_t);
-extern int GoStateCallback(tll_channel_t *, tll_msg_t *, uintptr_t);
+extern int GoCallback(tll_channel_t *, tll_msg_t *, void *);
+extern int GoStateCallback(tll_channel_t *, tll_msg_t *, void *);
 */
 import "C"
 import "context"
@@ -13,17 +13,17 @@ import "runtime/cgo"
 import "unsafe"
 
 //export GoCallback
-func GoCallback(c *C.tll_channel_t, m *C.tll_msg_t, data C.uintptr_t) C.int {
-	cb := cgo.Handle(data).Value().(*CallbackHandle)
+func GoCallback(c *C.tll_channel_t, m *C.tll_msg_t, data unsafe.Pointer) C.int {
+	cb := (*cgo.Handle)(data).Value().(*CallbackHandle)
 	return C.int(cb.cb(Channel{c, runtime.Pinner{}}, Message{m}))
 }
 
 //export GoStateCallback
-func GoStateCallback(c *C.tll_channel_t, m *C.tll_msg_t, data C.uintptr_t) C.int {
+func GoStateCallback(c *C.tll_channel_t, m *C.tll_msg_t, data unsafe.Pointer) C.int {
 	if m.msgid != C.int(StateDestroy) {
 		return 0
 	}
-	h := cgo.Handle(data).Value().(*CallbackHandle)
+	h := (*cgo.Handle)(data).Value().(*CallbackHandle)
 	h.Free()
 	return 0
 }
@@ -33,7 +33,8 @@ type Callback func(Channel, Message) int
 type CallbackHandle struct {
 	cb      Callback
 	channel *Channel
-	handle  cgo.Handle
+	pinner  runtime.Pinner
+	handle  *cgo.Handle
 }
 
 func (self *CallbackHandle) Free() {
@@ -43,23 +44,29 @@ func (self *CallbackHandle) Free() {
 	C.tll_channel_callback_del(self.channel.ptr, C.tll_channel_callback_t(C.GoCallback), unsafe.Pointer(self.handle), C.unsigned(MessageMaskAll))
 	C.tll_channel_callback_del(self.channel.ptr, C.tll_channel_callback_t(C.GoStateCallback), unsafe.Pointer(self.handle), C.unsigned(MessageMaskState))
 	self.handle.Delete()
+	self.pinner.Unpin()
+	self.handle = nil
 	self.channel = nil
 	self.cb = nil
 }
 
 func (self Channel) CallbackAdd(cb Callback, mask uint) *CallbackHandle {
-	cbh := CallbackHandle{cb, &self, 0}
-	h := cgo.NewHandle(&cbh)
-	if C.tll_channel_callback_add(self.ptr, C.tll_channel_callback_t(C.GoCallback), unsafe.Pointer(h), C.unsigned(mask)) != 0 {
-		h.Delete()
+	cbh := CallbackHandle{cb, &self, runtime.Pinner{}, nil}
+	handle := cgo.NewHandle(&cbh)
+	cbh.handle = &handle
+	cbh.pinner.Pin(cbh.handle)
+	h := unsafe.Pointer(cbh.handle)
+	if C.tll_channel_callback_add(self.ptr, C.tll_channel_callback_t(C.GoCallback), h, C.unsigned(mask)) != 0 {
+		cbh.handle.Delete()
+		cbh.pinner.Unpin()
 		return nil
 	}
-	if C.tll_channel_callback_add(self.ptr, C.tll_channel_callback_t(C.GoStateCallback), unsafe.Pointer(h), C.unsigned(MessageMaskState)) != 0 {
-		C.tll_channel_callback_del(self.ptr, C.tll_channel_callback_t(C.GoCallback), unsafe.Pointer(h), C.unsigned(mask))
-		h.Delete()
+	if C.tll_channel_callback_add(self.ptr, C.tll_channel_callback_t(C.GoStateCallback), h, C.unsigned(MessageMaskState)) != 0 {
+		C.tll_channel_callback_del(self.ptr, C.tll_channel_callback_t(C.GoCallback), h, C.unsigned(mask))
+		cbh.handle.Delete()
+		cbh.pinner.Unpin()
 		return nil
 	}
-	cbh.handle = h
 	return &cbh
 }
 
