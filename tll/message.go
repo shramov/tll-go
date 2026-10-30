@@ -70,7 +70,7 @@ type GoMessage struct {
 func (self *GoMessage) AsMsg(pinner *runtime.Pinner) Message {
 	ptr := &C.tll_msg_t{
 		msgid: C.int(self.Id),
-		_type: C.short(self.Type),
+		_type: C.ushort(self.Type),
 		seq:   C.longlong(self.Seq),
 		size:  C.size_t(len(self.Data)),
 	}
