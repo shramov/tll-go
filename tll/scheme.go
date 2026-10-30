@@ -12,7 +12,7 @@ type SchemeMessage struct{ ptr *C.tll_scheme_message_t }
 
 func (self *SchemeMessage) String() string {
 	if self.ptr == nil {
-		return fmt.Sprintf("SchemeMessage{ nil }")
+		return "SchemeMessage{ nil }"
 	}
 	return fmt.Sprintf("SchemeMessage{ name: %s }", self.Name())
 }
