@@ -17,6 +17,7 @@ type  Configlike interface {
 func (self ConstConfig) AsConstConfig() ConstConfig { return self }
 func (self Config) AsConstConfig() ConstConfig { return self.ConstConfig }
 
+// NewConfig creates an empty config. Release it with Free.
 func NewConfig() *Config {
 	ptr := C.tll_config_new()
 	if ptr == nil {
@@ -57,6 +58,8 @@ func (self Config) Ref() Config {
 	return Config{self.ConstConfig.Ref()}
 }
 
+// Free drops the reference to the config. Configs are reference counted: objects that keep a
+// config (a Context created with NewContextCfg, for example) hold their own reference.
 func (self *ConstConfig) Free() {
 	C.tll_config_unref(self.ptr)
 	self.ptr = nil

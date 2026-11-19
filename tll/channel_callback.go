@@ -37,6 +37,13 @@ type CallbackHandle struct {
 	handle  *cgo.Handle
 }
 
+// Free removes the callback from the channel. The handle is released automatically when the
+// channel is destroyed, but a channel that is reused (opened and closed repeatedly) never is,
+// so call Free when the callback is no longer needed.
+//
+// It is safe to call Free from inside a callback (libtll itself removes callbacks from callbacks,
+// for example a Loop does it when a channel is destroyed). It is not safe to call it from
+// another goroutine while the Loop that drives the channel is being stepped.
 func (self *CallbackHandle) Free() {
 	if self.channel == nil {
 		return
@@ -50,6 +57,10 @@ func (self *CallbackHandle) Free() {
 	self.cb = nil
 }
 
+// CallbackAdd registers cb for the message types in mask (for example
+// MessageMaskData|MessageMaskControl). The callback runs inside Loop.Step on the goroutine
+// that steps the Loop, and the Message is valid only until cb returns: use Message.Copy to
+// keep it. It returns nil on error. Release the returned handle with CallbackHandle.Free.
 func (self Channel) CallbackAdd(cb Callback, mask uint) *CallbackHandle {
 	cbh := CallbackHandle{cb, &self, runtime.Pinner{}, nil}
 	handle := cgo.NewHandle(&cbh)
@@ -91,6 +102,13 @@ func (self *ChanCallback) Push(c Channel, m Message) int {
 	return 0
 }
 
+// ChanAddBuffered delivers copies of the messages to a Go channel with a buffer of size.
+//
+// Known limitations: the callback blocks the Loop (the whole Step) while the buffer is full and
+// nobody reads, until ctx is done; the returned channel is closed only when a message arrives
+// after ctx is done, so a reader can wait forever on a silent channel; and the handle is not
+// returned, so the callback cannot be removed from a channel that is reused. For a long-lived
+// channel use CallbackAdd with your own Go channel and release the handle.
 func (self Channel) ChanAddBuffered(ctx context.Context, size int, mask uint) <-chan GoMessage {
 	r := ChanCallback{ch: make(chan GoMessage, size), ctx: ctx}
 	r.handle = self.CallbackAdd(r.Push, mask)
